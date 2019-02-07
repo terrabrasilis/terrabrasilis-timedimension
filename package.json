@@ -1,0 +1,48 @@
+{
+  "name": "terrabrasilis-timedimension",
+  "version": "0.0.1",
+  "description": "TerraBrasilis Leaflet Time Dimension plugin",
+  "scripts": {
+    "test": "echo \"Msg: Building without test yet.\""
+  },
+  "keywords": [
+    "webgis",
+    "geo",
+    "timedimension",
+    "leaflet",
+    "gis",
+    "map"
+  ],
+  "homepage": "http://apps.socib.es/Leaflet.TimeDimension/",
+  "bugs": {
+    "url": "https://github.com/socib/Leaflet.TimeDimension/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Biel Frontera (ICTS SOCIB)",
+    "email": "datacenter@socib.es",
+    "url": "http://www.socib.es/"
+  },
+  "contributors": [
+    {
+      "name": "Sylvain Marcadal (Ram)",
+      "email": "sylvain@marcadal.me",
+      "url": "https://github.com/ram-one"
+    },
+    {
+      "name": "André Carvalho",
+      "email": "afacarvalho@yahoo.com.br",
+      "url": "https://github.com/andre-carvalho"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/socib/Leaflet.TimeDimension.git"
+  },
+  "dependencies": {
+    "iso8601-js-period": "^0.2.1",
+    "leaflet": "~0.7.4 || ~1"
+  },
+  "main": "leaflet.timedimension.min.js",
+  "style": "leaflet.timedimension.control.min.css"
+}
