@@ -1,5 +1,5 @@
 /* 
- * Leaflet TimeDimension v1.1.0 - 2019-02-07 
+ * Leaflet TimeDimension v1.1.0 - 2019-02-25 
  * 
  * Copyright 2019 Biel Frontera (ICTS SOCIB) 
  * datacenter@socib.es 
@@ -96,7 +96,15 @@
 /**
 * Slider/Knobs styles
 */
-
+.timecontrol-aggregate{
+    margin-left: 3px;
+}
+.timecontrol-aggregate-toggle {
+    margin-bottom: 0px;
+    vertical-align: -webkit-baseline-middle;
+    padding-left: 2px;
+    padding-right: 2px;
+}
 .timecontrol-slider .slider {
     position: relative;
     height: 12px;

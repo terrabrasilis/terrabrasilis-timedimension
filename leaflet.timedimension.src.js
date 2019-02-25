@@ -1,5 +1,5 @@
 /* 
- * Leaflet TimeDimension v1.1.0 - 2019-02-07 
+ * Leaflet TimeDimension v1.1.0 - 2019-02-25 
  * 
  * Copyright 2019 Biel Frontera (ICTS SOCIB) 
  * datacenter@socib.es 
@@ -54,6 +54,7 @@ L.TimeDimension = (L.Layer || L.Class).extend({
         this._loadingTimeIndex = -1;
         this._loadingTimeout = this.options.loadingTimeout || 3000;
         this._syncedLayers = [];
+        this._aggregateTimes = this.options.aggregateTimes;
         if (this._availableTimes.length > 0) {
             this.setCurrentTime(this.options.currentTime || this._getDefaultCurrentTime());
         }
@@ -63,6 +64,14 @@ L.TimeDimension = (L.Layer || L.Class).extend({
         if (this.options.upperLimitTime) {
             this.setUpperLimit(this.options.upperLimitTime);
         }
+    },
+
+    setAggregateTime: function (value) {
+        this._aggregateTimes=value;
+    },
+
+    getAggregateTime: function () {
+        return this._aggregateTimes;
     },
 
     getAvailableTimes: function () {
@@ -131,7 +140,8 @@ L.TimeDimension = (L.Layer || L.Class).extend({
         
         this._currentTimeIndex = this._loadingTimeIndex;
         this.fire('timeload', {
-            time: time
+            time: time,
+            aggregateTimes: this._aggregateTimes
         });
         this._loadingTimeIndex = -1;
     },
@@ -294,6 +304,11 @@ L.TimeDimension = (L.Layer || L.Class).extend({
 
     _onSyncedLayerLoaded: function (e) {
         if (e.time == this._availableTimes[this._loadingTimeIndex] && this._checkSyncedLayersReady(e.time)) {
+            if(this._aggregateTimes && this._currentTimeIndex<0) {
+                this.fire('startaggregation', {
+                    aggregateTimes: this._aggregateTimes
+                });
+            }
             this._newTimeIndexLoaded();
         }
     },
@@ -669,6 +684,7 @@ L.TimeDimension.Layer = (L.Layer || L.Class).extend({
         }
         this._timeDimension.on("timeloading", this._onNewTimeLoading, this);
         this._timeDimension.on("timeload", this._update, this);
+        this._timeDimension.on("startaggregation", this._startAggregationTimeDimension, this);
         this._timeDimension.registerSyncedLayer(this);
         this._update();
     },
@@ -677,6 +693,7 @@ L.TimeDimension.Layer = (L.Layer || L.Class).extend({
         this._timeDimension.unregisterSyncedLayer(this);
         this._timeDimension.off("timeloading", this._onNewTimeLoading, this);
         this._timeDimension.off("timeload", this._update, this);
+        this._timeDimension.off("startaggregation", this._startAggregationTimeDimension, this);
         this.eachLayer(map.removeLayer, map);
         this._map = null;
     },
@@ -722,6 +739,11 @@ L.TimeDimension.Layer = (L.Layer || L.Class).extend({
         }
         this._currentLayer.bringToFront();
         return this;
+    },
+
+    _startAggregationTimeDimension: function(ev) {
+        this._baseLayer._visible=false;
+        this._baseLayer.redraw();
     },
 
     _onNewTimeLoading: function(ev) {
@@ -788,7 +810,8 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
         this._baseLayer.on('load', (function() {
             this._baseLayer.setLoaded(true);
             this.fire('timeload', {
-                time: this._defaultTime
+                time: this._defaultTime,
+                aggregateTimes: options.timeDimension._aggregateTimes
             });
         }).bind(this));
     },
@@ -836,7 +859,7 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
         }
     },
 
-    _update: function() {
+    _update: function(e) {
         if (!this._map)
             return;
         var time = this._timeDimension.getCurrentTime();
@@ -850,7 +873,8 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
         if (!this._map.hasLayer(layer)) {
             this._map.addLayer(layer);
         } else {
-            this._showLayer(layer, time);
+            var aggregateTimes = (e.aggregateTimes)?(e.aggregateTimes):(false);
+            this._showLayer(layer, time, aggregateTimes);
         }
     },
 
@@ -898,14 +922,14 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
         }
     },
 
-    _evictCachedTimes: function(keepforward, keepbackward) {
+    _evictCachedTimes: function(keepforward, keepbackward, aggregateTimes) {
         // Cache management
         var times = this._getLoadedTimes();
         var strTime = String(this._currentTime);
         var index = times.indexOf(strTime);
         var remove = [];
         // remove times before current time
-        if (keepbackward > -1) {
+        if (keepbackward > -1 && !aggregateTimes) {
             var objectsToRemove = index - keepbackward;
             if (objectsToRemove > 0) {
                 remove = times.splice(0, objectsToRemove);
@@ -913,7 +937,7 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
             }
         }
         if (keepforward > -1) {
-            index = times.indexOf(strTime);
+            if(aggregateTimes) keepforward=0;
             var objectsToRemove = times.length - index - keepforward - 1;
             if (objectsToRemove > 0) {
                 remove = times.splice(index + keepforward + 1, objectsToRemove);
@@ -921,9 +945,23 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
             }
         }
     },
-    _showLayer: function(layer, time) {
+    _showLayer: function(layer, time, aggregateTimes) {
         if (this._currentLayer && this._currentLayer !== layer) {
-            this._currentLayer.hide();
+            var currentIndex=this._availableTimes.indexOf(this._currentTime),
+            newIndex=this._availableTimes.indexOf(time);
+
+            if (aggregateTimes) {
+                
+                if(Math.abs(currentIndex-newIndex)>1) {
+                    // identify if new slider position jumping more than one point in timeline and invalidate the correspondente layers.
+                    this._evaluateCachedLayers(newIndex);
+                }else if(currentIndex>newIndex){
+                    // if new slider position jumps one position to backward so hide current layer.
+                    this._currentLayer.hide();
+                }
+            } else {
+                this._currentLayer.hide();
+            }
         }
         layer.show();
         if (this._currentLayer && this._currentLayer === layer) {
@@ -933,7 +971,36 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
         this._currentTime = time;
         
 
-        this._evictCachedTimes(this._timeCacheForward, this._timeCacheBackward);
+        this._evictCachedTimes(this._timeCacheForward, this._timeCacheBackward, aggregateTimes);
+    },
+
+    _evaluateCachedLayers: function (newIndex) {
+        
+        this._availableTimes.forEach(function(v,i){
+            if(i>newIndex){
+                if(this._layers[v]) {
+                    this._layers[v].hide();
+                    this._layers[v].redraw();
+                }
+            }else{
+                if(this._layers[v]) {
+                    this._layers[v].show();
+                    // to force request data for layer when redraw.
+                    this._layers[v].setLoaded(false);
+                    this._layers[v].redraw();
+                }else{
+                    // Create new layer to fill gap in the past.
+                    var newLayer = this._createLayerForTime(v);
+                    this._layers[v] = newLayer;
+                    if (this._map && !this._map.hasLayer(newLayer)) {
+                        this._map.addLayer(newLayer);
+                    }
+                    newLayer.on('load', (function(layer) {
+                        layer.setLoaded(true);
+                    }).bind(this, newLayer));
+                }
+            }
+        });
     },
 
     _getLayerForTime: function(time) {
@@ -1751,6 +1818,7 @@ L.Control.TimeDimension = L.Control.extend({
         playReverseButton: false,
         loopButton: false,
         displayDate: true,
+        displayAggregateTime: true,
         timeSlider: true,
         timeSliderDragUpdate: false,
         limitSliders: false,
@@ -1814,6 +1882,9 @@ L.Control.TimeDimension = L.Control.extend({
         }
         if (this.options.speedSlider) {
             this._sliderSpeed = this._createSliderSpeed(this.options.styleNS + ' timecontrol-slider timecontrol-speed', container);
+        }
+        if (this.options.displayAggregateTime) {
+            this._displayAggregateTime = this._createToggle('Aggregate', container);
         }
 
         this._steps = this.options.timeSteps || 1;
@@ -1959,6 +2030,25 @@ L.Control.TimeDimension = L.Control.extend({
                 this._displayDate.innerHTML = this._getDisplayNoTimeError();
             }
         }
+    },
+
+    _createToggle: function(title, container) {
+        var inputLabel = L.DomUtil.create('label', 'timecontrol-aggregate-toggle', container);
+        inputLabel.innerText=' '+title;
+        inputLabel.htmlFor='label_'+title;
+
+        var input = L.DomUtil.create('input', this.options.styleNS + ' timecontrol-' + title.toLowerCase(), container);
+        input.type="checkbox";
+        input.title = title;
+        input.id='label_'+title;
+        input.checked = this._timeDimension.getAggregateTime();
+
+        L.DomEvent
+            .addListener(input, 'change', L.DomEvent.stopPropagation)
+            .addListener(input, 'change', L.DomEvent.preventDefault)
+            .addListener(input, 'change', this['_button' + title.replace(/ /i, '') + 'Clicked'], this);
+
+        return input;
     },
 
     _createButton: function(title, container) {
@@ -2192,6 +2282,10 @@ L.Control.TimeDimension = L.Control.extend({
 
     _buttonDateClicked: function(){
         this._switchTimeZone();
+    },
+
+    _buttonAggregateClicked: function(){
+        this._timeDimension.setAggregateTime(this._displayAggregateTime.checked);
     },
 
     _sliderTimeValueChanged: function(newValue) {
