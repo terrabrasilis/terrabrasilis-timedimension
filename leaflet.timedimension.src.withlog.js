@@ -1,5 +1,5 @@
 /* 
- * Leaflet TimeDimension v1.1.0 - 2019-02-25 
+ * Leaflet TimeDimension v1.1.0 - 2019-03-01 
  * 
  * Copyright 2019 Biel Frontera (ICTS SOCIB) 
  * datacenter@socib.es 
@@ -975,8 +975,8 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
     },
 
     _evaluateCachedLayers: function (newIndex) {
-        
-        this._availableTimes.forEach(function(v,i){
+        for (var i = 0, len = this._availableTimes.length; i < len; i++) {
+            var v=this._availableTimes[i];
             if(i>newIndex){
                 if(this._layers[v]) {
                     this._layers[v].hide();
@@ -1000,7 +1000,7 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
                     }).bind(this, newLayer));
                 }
             }
-        });
+        }
     },
 
     _getLayerForTime: function(time) {
