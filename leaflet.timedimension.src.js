@@ -1047,7 +1047,7 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
     _createLayerForTime:function(time){
         var wmsParams = this._baseLayer.options;
         wmsParams.time = new Date(time).toISOString();
-        return new this._baseLayer.constructor(this._baseLayer.getURL(), wmsParams);
+        return new this._baseLayer.constructor(this._baseLayer.getURL(), wmsParams, this._baseLayer.headers, this._baseLayer.abort);
     },
 
     _getLoadedTimes: function() {
