@@ -1096,6 +1096,7 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
             }
         }).bind(this));
         oReq.overrideMimeType('application/xml');
+        oReq.open("GET", url);
 
         if(this._baseLayer.headers )
         {
@@ -1106,8 +1107,6 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
             }
         }
 
-        
-        oReq.open("GET", url);
         oReq.send();
     },
 
