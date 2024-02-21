@@ -1,6 +1,6 @@
 {
   "name": "terrabrasilis-timedimension",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "TerraBrasilis Leaflet Time Dimension plugin",
   "scripts": {
     "test": "echo \"Msg: Building without test yet.\""
