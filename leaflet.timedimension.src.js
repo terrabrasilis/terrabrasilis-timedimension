@@ -1096,6 +1096,17 @@ L.TimeDimension.Layer.WMS = L.TimeDimension.Layer.extend({
             }
         }).bind(this));
         oReq.overrideMimeType('application/xml');
+
+        if(this._baseLayer.headers )
+        {
+            for (let i = 0; i < this._baseLayer.headers.length; i++) 
+            {
+                const currentHeader = this._baseLayer.headers[i];
+                oReq.setRequestHeader(currentHeader.header, currentHeader.value);
+            }
+        }
+
+        
         oReq.open("GET", url);
         oReq.send();
     },
