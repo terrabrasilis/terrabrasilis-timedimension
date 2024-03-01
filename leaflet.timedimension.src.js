@@ -1015,7 +1015,7 @@
           if (this._layers.hasOwnProperty(nearestTime)) {
               return this._layers[nearestTime];
           }         
-          console.log("_layers: " + Object.keys(this._layers))           
+          
           var newLayer = this._createLayerForTime(nearestTime);
   
           this._layers[time] = newLayer;
