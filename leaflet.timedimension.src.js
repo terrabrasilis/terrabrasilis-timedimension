@@ -1052,7 +1052,7 @@
           options.wmsParams = wmsParams;
           
 
-          return L.singleTile(this._baseLayer.getURL(), options);
+          return L.singleTile(this._baseLayer.getURL(), options, this._baseLayer.headers, null);
           
 //          return new this._baseLayer.constructor(this._baseLayer.getURL(), wmsParams, this._baseLayer.headers, this._baseLayer.abort);
       },
